@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}Anonymous Symptom Checker - MediTrack{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row">
+    <div class="col-md-10 mx-auto">
+      <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+          <h1 class="h3 mb-0">
+            <i class="fas fa-search-plus me-2"></i>Anonymous Symptom Checker
+          </h1>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>No account required!</strong> Get AI-powered recovery suggestions for your symptoms without creating an account.
+            <div class="mt-2">
+              <small class="text-muted">
+                <i class="fas fa-lock me-1"></i>This information is not stored or saved. For personalized tracking and recommendations over time, 
+                <a href="{{ url_for('register') }}">create an account</a>.
+              </small>
+            </div>
+          </div>
+          
+          {% if not recovery_data %}
+          <!-- Symptom Input Form -->
+          <form method="POST" action="{{ url_for('anonymous_symptom') }}" class="needs-validation" novalidate>
+            {{ form.csrf_token }}
+            
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="symptom" class="form-label">What symptom are you experiencing?</label>
+                  {{ form.symptom(class="form-control", id="symptom", placeholder="e.g., Headache, Back pain, Sore throat") }}
+<!--                   {% if form.symptom.errors %}
+                    <div class="invalid-feedback d-block">
+                      {% for error in form.symptom.errors %}
+                        {{ error }}
+                      {% endfor %}
+                    </div>
+                  {% endif %} -->
+                </div>
+                
+                <div class="mb-3">
+                  <label for="severity" class="form-label">How severe is it? (1-10)</label>
+                  <div class="d-flex align-items-center mb-2">
+                    <input type="range" class="form-range flex-grow-1 me-2" min="1" max="10" id="severity" name="severity" value="{{ form.severity.data or 5 }}">
+                    <span id="severityValue" class="badge bg-primary">5</span>
+                  </div>
+                  <div class="d-flex justify-content-between small text-muted">
+                    <span>Mild (1)</span>
+                    <span>Moderate (5)</span>
+                    <span>Severe (10)</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="description" class="form-label">Description (Optional)</label>
+                  {{ form.description(class="form-control", id="description", rows="3", placeholder="Describe your symptom in more detail...") }}
+                </div>
+                
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="mb-3">
+                      <label for="age" class="form-label">Age (Optional)</label>
+                      {{ form.age(class="form-control", id="age", placeholder="e.g., 35") }}
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="mb-3">
+                      <label for="gender" class="form-label">Gender (Optional)</label>
+                      {{ form.gender(class="form-select", id="gender") }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-search me-2"></i>Get Recovery Suggestions
+              </button>
+            </div>
+          </form>
+          
+          {% else %}
+          <!-- Recovery Suggestions Display -->
+          <div class="recovery-suggestions">
+            <div class="text-center mb-4">
+              <i class="fas fa-file-medical-alt fa-3x text-primary mb-3"></i>
+              <h2>{{ recovery_data.title }}</h2>
+              <p class="lead">{{ recovery_data.description }}</p>
+            </div>
+            
+            <!-- User Input Summary -->
+            <div class="alert alert-light border mb-4">
+              <div class="row">
+                <div class="col-md-6">
+                  <p class="mb-1"><strong>Symptom:</strong> {{ form.symptom.data }}</p>
+                  <p class="mb-1">
+                    <strong>Severity:</strong> 
+                    <span class="badge {% if form.severity.data <= 3 %}bg-success{% elif form.severity.data <= 7 %}bg-warning{% else %}bg-danger{% endif %}">
+                      {{ form.severity.data }}/10
+                    </span>
+                  </p>
+                </div>
+                <div class="col-md-6">
+                  {% if form.age.data %}
+                    <p class="mb-1"><strong>Age:</strong> {{ form.age.data }}</p>
+                  {% endif %}
+                  {% if form.gender.data and form.gender.data != '' %}
+                    <p class="mb-1"><strong>Gender:</strong> {{ form.gender.data.capitalize() }}</p>
+                  {% endif %}
+                </div>
+              </div>
+              {% if form.description.data %}
+                <p class="mb-0 mt-2"><strong>Description:</strong> {{ form.description.data }}</p>
+              {% endif %}
+            </div>
+            
+            <!-- Recommendations -->
+            <h3 class="mb-3">Recommendations</h3>
+            
+            <div class="accordion mb-4" id="recommendationsAccordion">
+              {% for rec in recovery_data.recommendations %}
+                <div class="accordion-item mb-3 border recommendation-priority-{{ rec.priority }}">
+                  <h2 class="accordion-header" id="heading{{ loop.index }}">
+                    <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}" aria-expanded="{{ 'true' if loop.first else 'false' }}" aria-controls="collapse{{ loop.index }}">
+                      <div class="d-flex align-items-center w-100">
+                        <span class="badge {% if rec.priority == 1 %}bg-danger{% elif rec.priority == 2 %}bg-warning{% else %}bg-success{% endif %} me-3">
+                          {{ 'High' if rec.priority == 1 else 'Medium' if rec.priority == 2 else 'Low' }} Priority
+                        </span>
+                        <strong>{{ rec.title }}</strong>
+                      </div>
+                    </button>
+                  </h2>
+                  <div id="collapse{{ loop.index }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}" aria-labelledby="heading{{ loop.index }}" data-bs-parent="#recommendationsAccordion">
+                    <div class="accordion-body">
+                      <p>{{ rec.description|safe }}</p>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+            
+            <!-- Disclaimer -->
+            <div class="alert alert-warning mb-4">
+              <div class="d-flex">
+                <div class="me-3">
+                  <i class="fas fa-exclamation-triangle fa-2x"></i>
+                </div>
+                <div>
+                  <h4 class="alert-heading">Medical Disclaimer</h4>
+                  <p class="mb-0">This information is generated by AI and is not a substitute for professional medical advice. Always consult with a qualified healthcare provider for medical concerns.</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="row">
+              <div class="col-md-6 mb-3 mb-md-0">
+                <a href="{{ url_for('anonymous_symptom') }}" class="btn btn-outline-primary d-block">
+                  <i class="fas fa-arrow-left me-2"></i>Check Another Symptom
+                </a>
+              </div>
+              <div class="col-md-6">
+                <a href="{{ url_for('register') }}" class="btn btn-success d-block">
+                  <i class="fas fa-user-plus me-2"></i>Create Account to Save Data
+                </a>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the severity slider
+    const severitySlider = document.getElementById('severity');
+    const severityValue = document.getElementById('severityValue');
+    
+    if (severitySlider && severityValue) {
+      // Update value display on slider change
+      severitySlider.addEventListener('input', function() {
+        severityValue.textContent = this.value;
+        
+        // Update color based on severity
+        severityValue.className = 'badge';
+        if (this.value <= 3) {
+          severityValue.classList.add('bg-success');
+        } else if (this.value <= 7) {
+          severityValue.classList.add('bg-warning');
+        } else {
+          severityValue.classList.add('bg-danger');
+        }
+      });
+      
+      // Trigger once to set initial value
+      severitySlider.dispatchEvent(new Event('input'));
+    }
+  });
+</script>
+{% endblock %}

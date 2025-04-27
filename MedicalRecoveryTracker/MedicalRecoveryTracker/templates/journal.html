@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Medical Journal - MediTrack{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row">
+    <div class="col-md-12">
+      <h1 class="mb-4">
+        <i class="fas fa-book-medical me-2"></i>Medical Journal
+      </h1>
+    </div>
+  </div>
+  
+  <div class="row">
+    <!-- Record Symptom Form -->
+    <div class="col-lg-4 mb-4">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-plus-circle me-2"></i>Record Symptom
+          </h3>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('journal') }}" class="needs-validation" novalidate>
+            {{ form.csrf_token }}
+            
+            <div class="mb-3">
+              <label for="symptom" class="form-label">Symptom</label>
+              {{ form.symptom(class="form-control", id="symptom", placeholder="e.g., Headache, Back Pain, Cough") }}
+              {% if form.symptom.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.symptom.errors %}
+                    {{ error }}
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+            
+            <div class="mb-3">
+              <label for="description" class="form-label">Description (Optional)</label>
+              {{ form.description(class="form-control", id="description", rows="3", placeholder="Describe your symptom in detail...") }}
+            </div>
+            
+            <div class="mb-3">
+              <label for="severity" class="form-label">Severity (1-10)</label>
+              <div class="d-flex align-items-center mb-2">
+                <input type="range" class="form-range flex-grow-1 me-2" min="1" max="10" id="severity" name="severity" value="{{ form.severity.data or 5 }}">
+                <span id="severityValue" class="badge bg-primary">5</span>
+              </div>
+              <div class="d-flex justify-content-between small text-muted">
+                <span>Mild (1)</span>
+                <span>Moderate (5)</span>
+                <span>Severe (10)</span>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label for="date_experienced" class="form-label">Date Experienced</label>
+              {{ form.date_experienced(class="form-control", id="date_experienced", type="date") }}
+              {% if form.date_experienced.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.date_experienced.errors %}
+                    {{ error }}
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+            
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-2"></i>Save Entry
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Chart Visualization -->
+    <div class="col-lg-8 mb-4">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-chart-line me-2"></i>Symptom Tracking
+          </h3>
+        </div>
+        <div class="card-body">
+          <div id="chartContainer">
+            <div id="symptomChart" class="chart-container">
+              <canvas id="symptomChartCanvas"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Journal Entries List -->
+  <div class="row">
+    <div class="col-md-12">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-history me-2"></i>Journal History
+          </h3>
+        </div>
+        <div class="card-body">
+          {% if entries %}
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Symptom</th>
+                    <th>Severity</th>
+                    <th>Description</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for entry in entries %}
+                    <tr>
+                      <td>{{ entry.date_experienced.strftime('%b %d, %Y') }}</td>
+                      <td>{{ entry.symptom }}</td>
+                      <td>
+                        <span class="symptom-severity" data-severity="{{ entry.severity }}">
+                          {{ entry.severity }}
+                        </span>
+                      </td>
+                      <td>
+                        {% if entry.description %}
+                          {{ entry.description|truncate(100) }}
+                        {% else %}
+                          <span class="text-muted">No description</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        <form method="POST" action="{{ url_for('delete_journal', id=entry.id) }}" onsubmit="return confirmDelete(event, 'journal entry')" class="d-inline">
+                          <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </form>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="text-center py-5">
+              <i class="fas fa-book-medical fa-4x text-muted mb-3"></i>
+              <h4>No journal entries yet</h4>
+              <p class="text-muted">Start tracking your symptoms by adding an entry using the form.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the severity slider
+    const severitySlider = document.getElementById('severity');
+    const severityValue = document.getElementById('severityValue');
+    
+    if (severitySlider && severityValue) {
+      // Update value display on slider change
+      severitySlider.addEventListener('input', function() {
+        severityValue.textContent = this.value;
+        
+        // Update color based on severity
+        severityValue.className = 'badge';
+        if (this.value <= 3) {
+          severityValue.classList.add('bg-success');
+        } else if (this.value <= 7) {
+          severityValue.classList.add('bg-warning');
+        } else {
+          severityValue.classList.add('bg-danger');
+        }
+      });
+      
+      // Trigger once to set initial value
+      severitySlider.dispatchEvent(new Event('input'));
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}Nutrition Recommendations - MediTrack{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row">
+    <div class="col-md-12">
+      <h1 class="mb-4">
+        <i class="fas fa-apple-alt me-2"></i>Nutrition Recommendations
+      </h1>
+      <p class="lead">
+        Receive personalized dietary guidance based on your symptoms and health conditions.
+        Our AI will consider your food allergies and suggest nutritional approaches to support your recovery.
+      </p>
+    </div>
+  </div>
+  
+  <div class="row">
+    <!-- Generate Nutrition Plan -->
+    <div class="col-lg-4 mb-4">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-utensils me-2"></i>Generate Nutrition Plan
+          </h3>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('create_nutrition_plan') }}" class="needs-validation" novalidate>
+            <div class="mb-4">
+              <label class="form-label fw-bold">Select Symptoms to Address</label>
+              
+              {% if recent_symptoms %}
+                <div class="list-group">
+                  {% for entry in recent_symptoms %}
+                    <label class="list-group-item d-flex">
+                      <div class="form-check">
+                        <input class="form-check-input plan-checkbox me-2" type="checkbox" name="symptom_ids" value="{{ entry.id }}" id="symptom-{{ entry.id }}">
+                      </div>
+                      <div>
+                        <strong>{{ entry.symptom }}</strong>
+                        <div class="d-flex align-items-center">
+                          <span class="symptom-severity me-2" data-severity="{{ entry.severity }}">
+                            {{ entry.severity }}
+                          </span>
+                          <small class="text-muted">{{ entry.date_experienced.strftime('%b %d, %Y') }}</small>
+                        </div>
+                      </div>
+                    </label>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="alert alert-info">
+                  <i class="fas fa-info-circle me-2"></i>
+                  No symptoms recorded yet. Please add symptoms in your <a href="{{ url_for('journal') }}">Medical Journal</a> first.
+                </div>
+              {% endif %}
+            </div>
+            
+            <!-- Food Allergies Section -->
+            <div class="mb-4">
+              <h5 class="mb-3">Your Food Allergies</h5>
+              
+              {% if allergies %}
+                <div class="list-group mb-3">
+                  {% for allergy in allergies %}
+                    <div class="list-group-item">
+                      <strong>{{ allergy.food_item }}</strong>
+                      <span class="badge {% if allergy.severity == 'severe' %}bg-danger{% elif allergy.severity == 'moderate' %}bg-warning{% else %}bg-success{% endif %} ms-2">
+                        {{ allergy.severity.capitalize() }}
+                      </span>
+                    </div>
+                  {% endfor %}
+                </div>
+                <p class="small text-muted">
+                  <i class="fas fa-info-circle me-1"></i>
+                  These allergies will be taken into account when generating your nutrition plan.
+                </p>
+              {% else %}
+                <div class="alert alert-warning">
+                  <i class="fas fa-exclamation-triangle me-2"></i>
+                  No food allergies recorded. <a href="{{ url_for('profile') }}">Add your allergies</a> to ensure safe dietary recommendations.
+                </div>
+              {% endif %}
+            </div>
+            
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-success" id="generateNutritionBtn" {% if not recent_symptoms %}disabled{% endif %}>
+                <i class="fas fa-leaf me-2"></i>Generate Nutrition Plan
+              </button>
+              {% if not recent_symptoms %}
+                <a href="{{ url_for('journal') }}" class="btn btn-outline-success">
+                  <i class="fas fa-plus me-2"></i>Add Symptoms First
+                </a>
+              {% endif %}
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Nutrition Plans List -->
+    <div class="col-lg-8 mb-4">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-clipboard-list me-2"></i>Your Nutrition Plans
+          </h3>
+        </div>
+        <div class="card-body">
+          {% if nutrition_plans %}
+            <div class="row">
+              {% for plan in nutrition_plans %}
+                <div class="col-md-6 mb-4">
+                  <div class="card h-100 plan-card nutrition">
+                    <div class="card-body">
+                      <h4 class="card-title">{{ plan.title }}</h4>
+                      <p class="card-text text-muted small">
+                        <i class="fas fa-calendar-alt me-1"></i>{{ plan.created_at.strftime('%b %d, %Y') }}
+                      </p>
+                      <p class="card-text">{{ plan.description|truncate(150) }}</p>
+                    </div>
+                    <div class="card-footer bg-transparent border-top-0">
+                      <a href="{{ url_for('view_plan', id=plan.id) }}" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-eye me-1"></i>View Details
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center py-5">
+              <i class="fas fa-utensils fa-4x text-muted mb-3"></i>
+              <h4>No nutrition plans yet</h4>
+              <p class="text-muted">Generate personalized nutrition plans based on your symptoms and allergies.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Nutrition Tips Section -->
+  <div class="row">
+    <div class="col-md-12">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-leaf me-2"></i>General Nutrition Tips
+          </h3>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4 mb-4 mb-md-0">
+              <div class="recommendation-item">
+                <h4><i class="fas fa-carrot me-2"></i>Whole Foods</h4>
+                <p>Focus on consuming a variety of whole, unprocessed foods. Fruits, vegetables, whole grains, lean proteins, and healthy fats provide essential nutrients that support healing and overall health.</p>
+              </div>
+            </div>
+            
+            <div class="col-md-4 mb-4 mb-md-0">
+              <div class="recommendation-item">
+                <h4><i class="fas fa-fire-alt me-2"></i>Anti-Inflammatory Foods</h4>
+                <p>Incorporate anti-inflammatory foods like fatty fish, berries, leafy greens, nuts, and olive oil. These foods can help reduce inflammation and support recovery from many conditions.</p>
+              </div>
+            </div>
+            
+            <div class="col-md-4">
+              <div class="recommendation-item">
+                <h4><i class="fas fa-glass-water me-2"></i>Hydration</h4>
+                <p>Stay well-hydrated throughout the day. Water is essential for nearly every bodily function, including nutrient transport, temperature regulation, and waste elimination.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Handle checkbox selection for plan generation
+    const checkboxes = document.querySelectorAll('.plan-checkbox');
+    const generateBtn = document.getElementById('generateNutritionBtn');
+    
+    if (checkboxes.length > 0 && generateBtn) {
+      checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateButtonState);
+      });
+      
+      // Initial check
+      updateButtonState();
+    }
+    
+    function updateButtonState() {
+      const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+      generateBtn.disabled = !anyChecked;
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}Sports Recovery - MediTrack{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row">
+    <div class="col-md-12">
+      <h1 class="mb-4">
+        <i class="fas fa-running me-2"></i>Sports Recovery
+      </h1>
+      <p class="lead">
+        Get specialized recovery recommendations tailored for athletes and active individuals.
+        Our AI will consider your activities and symptoms to provide targeted suggestions for optimal performance and recovery.
+      </p>
+    </div>
+  </div>
+  
+  <div class="row">
+    <!-- Generate Sports Recovery Plan -->
+    <div class="col-lg-4 mb-4">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-dumbbell me-2"></i>Generate Sports Plan
+          </h3>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('create_sports_plan') }}" class="needs-validation" novalidate>
+            <!-- Athletic Activities Section -->
+            <div class="mb-4">
+              <label class="form-label fw-bold">Your Athletic Activities</label>
+              
+              {% if activities %}
+                <div class="list-group mb-3">
+                  {% for activity in activities %}
+                    <label class="list-group-item d-flex">
+                      <div class="form-check">
+                        <input class="form-check-input activity-checkbox me-2" type="checkbox" name="activity_ids" value="{{ activity.id }}" id="activity-{{ activity.id }}">
+                      </div>
+                      <div>
+                        <strong>{{ activity.name }}</strong>
+                        <div>
+                          <span class="badge {% if activity.intensity == 'high' %}bg-danger{% elif activity.intensity == 'moderate' %}bg-warning{% else %}bg-success{% endif %} me-2">
+                            {{ activity.intensity.capitalize() }}
+                          </span>
+                          <small class="text-muted">{{ activity.frequency }}</small>
+                        </div>
+                      </div>
+                    </label>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="alert alert-info">
+                  <i class="fas fa-info-circle me-2"></i>
+                  No activities recorded yet. Please add your athletic activities in your <a href="{{ url_for('profile') }}">Profile</a> first.
+                </div>
+              {% endif %}
+            </div>
+            
+            <!-- Symptoms Section -->
+            <div class="mb-4">
+              <label class="form-label fw-bold">Select Symptoms/Injuries to Address</label>
+              
+              {% if recent_symptoms %}
+                <div class="list-group">
+                  {% for entry in recent_symptoms %}
+                    <label class="list-group-item d-flex">
+                      <div class="form-check">
+                        <input class="form-check-input symptom-checkbox me-2" type="checkbox" name="symptom_ids" value="{{ entry.id }}" id="symptom-{{ entry.id }}">
+                      </div>
+                      <div>
+                        <strong>{{ entry.symptom }}</strong>
+                        <div class="d-flex align-items-center">
+                          <span class="symptom-severity me-2" data-severity="{{ entry.severity }}">
+                            {{ entry.severity }}
+                          </span>
+                          <small class="text-muted">{{ entry.date_experienced.strftime('%b %d, %Y') }}</small>
+                        </div>
+                      </div>
+                    </label>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="alert alert-info">
+                  <i class="fas fa-info-circle me-2"></i>
+                  No symptoms recorded yet. Please add symptoms in your <a href="{{ url_for('journal') }}">Medical Journal</a> first.
+                </div>
+              {% endif %}
+            </div>
+            
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-primary" id="generateSportsBtn" {% if not activities or not recent_symptoms %}disabled{% endif %}>
+                <i class="fas fa-medal me-2"></i>Generate Sports Recovery Plan
+              </button>
+              
+              {% if not activities %}
+                <a href="{{ url_for('profile') }}" class="btn btn-outline-primary">
+                  <i class="fas fa-plus me-2"></i>Add Activities First
+                </a>
+              {% endif %}
+              
+              {% if not recent_symptoms and activities %}
+                <a href="{{ url_for('journal') }}" class="btn btn-outline-primary">
+                  <i class="fas fa-plus me-2"></i>Add Symptoms First
+                </a>
+              {% endif %}
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Sports Recovery Plans List -->
+    <div class="col-lg-8 mb-4">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-clipboard-list me-2"></i>Your Sports Recovery Plans
+          </h3>
+        </div>
+        <div class="card-body">
+          {% if sports_plans %}
+            <div class="row">
+              {% for plan in sports_plans %}
+                <div class="col-md-6 mb-4">
+                  <div class="card h-100 plan-card sports">
+                    <div class="card-body">
+                      <h4 class="card-title">{{ plan.title }}</h4>
+                      <p class="card-text text-muted small">
+                        <i class="fas fa-calendar-alt me-1"></i>{{ plan.created_at.strftime('%b %d, %Y') }}
+                      </p>
+                      <p class="card-text">{{ plan.description|truncate(150) }}</p>
+                    </div>
+                    <div class="card-footer bg-transparent border-top-0">
+                      <a href="{{ url_for('view_plan', id=plan.id) }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-eye me-1"></i>View Details
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center py-5">
+              <i class="fas fa-running fa-4x text-muted mb-3"></i>
+              <h4>No sports recovery plans yet</h4>
+              <p class="text-muted">Generate personalized sports recovery plans based on your activities and symptoms.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Sports Recovery Tips Section -->
+  <div class="row">
+    <div class="col-md-12">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-medal me-2"></i>General Sports Recovery Tips
+          </h3>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4 mb-4 mb-md-0">
+              <div class="recommendation-item">
+                <h4><i class="fas fa-water me-2"></i>Active Recovery</h4>
+                <p>Incorporate light movement and active recovery on rest days. Low-intensity activities like walking, swimming, or yoga can improve circulation, reduce muscle soreness, and speed up recovery.</p>
+              </div>
+            </div>
+            
+            <div class="col-md-4 mb-4 mb-md-0">
+              <div class="recommendation-item">
+                <h4><i class="fas fa-compress-arrows-alt me-2"></i>Compression</h4>
+                <p>Consider compression garments during and after intense activity. Compression can help reduce swelling, improve circulation, and potentially speed up recovery between training sessions.</p>
+              </div>
+            </div>
+            
+            <div class="col-md-4">
+              <div class="recommendation-item">
+                <h4><i class="fas fa-snowflake me-2"></i>Cold Therapy</h4>
+                <p>Utilize ice baths or cold compresses for acute injuries or after high-intensity workouts. Cold therapy can help reduce inflammation and muscle soreness when applied appropriately.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Handle checkbox selection for plan generation
+    const activityCheckboxes = document.querySelectorAll('.activity-checkbox');
+    const symptomCheckboxes = document.querySelectorAll('.symptom-checkbox');
+    const generateBtn = document.getElementById('generateSportsBtn');
+    
+    if ((activityCheckboxes.length > 0 || symptomCheckboxes.length > 0) && generateBtn) {
+      activityCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateButtonState);
+      });
+      
+      symptomCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateButtonState);
+      });
+      
+      // Initial check
+      updateButtonState();
+    }
+    
+    function updateButtonState() {
+      const anyActivityChecked = Array.from(activityCheckboxes).some(cb => cb.checked);
+      const anySymptomChecked = Array.from(symptomCheckboxes).some(cb => cb.checked);
+      generateBtn.disabled = !(anyActivityChecked && anySymptomChecked);
+    }
+  });
+</script>
+{% endblock %}

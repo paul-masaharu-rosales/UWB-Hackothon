@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile - MediTrack{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row">
+    <div class="col-md-12">
+      <h1 class="mb-4">
+        <i class="fas fa-user-circle me-2"></i>My Profile
+      </h1>
+    </div>
+  </div>
+  
+  <div class="row">
+    <!-- Profile Information -->
+    <div class="col-lg-6">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-id-card me-2"></i>Personal Information
+          </h3>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('profile') }}" class="needs-validation" novalidate>
+            {{ form.csrf_token }}
+            
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="first_name" class="form-label">First Name</label>
+                {{ form.first_name(class="form-control", id="first_name") }}
+              </div>
+              <div class="col-md-6">
+                <label for="last_name" class="form-label">Last Name</label>
+                {{ form.last_name(class="form-control", id="last_name") }}
+              </div>
+            </div>
+            
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="age" class="form-label">Age</label>
+                {{ form.age(class="form-control", id="age") }}
+              </div>
+              <div class="col-md-6">
+                <label for="gender" class="form-label">Gender</label>
+                {{ form.gender(class="form-select", id="gender") }}
+              </div>
+            </div>
+            
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="weight" class="form-label">Weight (kg)</label>
+                {{ form.weight(class="form-control", id="weight") }}
+              </div>
+              <div class="col-md-6">
+                <label for="height" class="form-label">Height (cm)</label>
+                {{ form.height(class="form-control", id="height") }}
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">BMI</label>
+              <div class="form-control bg-light">
+                {% if current_user.calculate_bmi() %}
+                  {{ current_user.calculate_bmi() }}
+                {% else %}
+                  <span class="text-muted">Please enter height and weight to calculate BMI</span>
+                {% endif %}
+              </div>
+            </div>
+            
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-2"></i>Save Profile
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Athletic Activities -->
+    <div class="col-lg-6">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-running me-2"></i>Athletic Activities
+          </h3>
+        </div>
+        <div class="card-body">
+          <div class="mb-4">
+            <form method="POST" action="{{ url_for('add_activity') }}" class="needs-validation" novalidate>
+              {{ activity_form.csrf_token }}
+              
+              <div class="mb-3">
+                <label for="name" class="form-label">Activity Name</label>
+                {{ activity_form.name(class="form-control", id="name", placeholder="e.g., Running, Swimming, Yoga") }}
+              </div>
+              
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label for="frequency" class="form-label">Frequency</label>
+                  {{ activity_form.frequency(class="form-control", id="frequency", placeholder="e.g., 3 times a week") }}
+                </div>
+                <div class="col-md-6">
+                  <label for="intensity" class="form-label">Intensity</label>
+                  {{ activity_form.intensity(class="form-select", id="intensity") }}
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <label for="notes" class="form-label">Notes</label>
+                {{ activity_form.notes(class="form-control", id="notes", rows="2") }}
+              </div>
+              
+              <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-plus me-2"></i>Add Activity
+                </button>
+              </div>
+            </form>
+          </div>
+          
+          <hr>
+          
+          <h4 class="mb-3">Your Activities</h4>
+          {% if activities %}
+            <div class="list-group">
+              {% for activity in activities %}
+                <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                  <div>
+                    <h5 class="mb-1">{{ activity.name }}</h5>
+                    <p class="mb-1">
+                      <span class="badge bg-primary me-2">{{ activity.frequency }}</span>
+                      <span class="badge {% if activity.intensity == 'high' %}bg-danger{% elif activity.intensity == 'moderate' %}bg-warning{% else %}bg-success{% endif %}">
+                        {{ activity.intensity.capitalize() }} Intensity
+                      </span>
+                    </p>
+                    {% if activity.notes %}
+                      <small class="text-muted">{{ activity.notes }}</small>
+                    {% endif %}
+                  </div>
+                  <form method="POST" action="{{ url_for('delete_activity', id=activity.id) }}" onsubmit="return confirmDelete(event, 'activity')">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </form>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle me-2"></i>
+              No activities added yet. Add your athletic activities to receive more tailored recovery plans.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      
+      <!-- Food Allergies -->
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-allergies me-2"></i>Food Allergies
+          </h3>
+        </div>
+        <div class="card-body">
+          <div class="mb-4">
+            <form method="POST" action="{{ url_for('add_allergy') }}" class="needs-validation" novalidate>
+              {{ allergy_form.csrf_token }}
+              
+              <div class="mb-3">
+                <label for="food_item" class="form-label">Food Item</label>
+                {{ allergy_form.food_item(class="form-control", id="food_item", placeholder="e.g., Peanuts, Dairy, Shellfish") }}
+              </div>
+              
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label for="severity" class="form-label">Severity</label>
+                  {{ allergy_form.severity(class="form-select", id="severity") }}
+                </div>
+                <div class="col-md-6">
+                  <label for="allergy_notes" class="form-label">Notes</label>
+                  {{ allergy_form.notes(class="form-control", id="allergy_notes") }}
+                </div>
+              </div>
+              
+              <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-plus me-2"></i>Add Allergy
+                </button>
+              </div>
+            </form>
+          </div>
+          
+          <hr>
+          
+          <h4 class="mb-3">Your Allergies</h4>
+          {% if allergies %}
+            <div class="list-group">
+              {% for allergy in allergies %}
+                <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                  <div>
+                    <h5 class="mb-1">{{ allergy.food_item }}</h5>
+                    <p class="mb-1">
+                      <span class="badge {% if allergy.severity == 'severe' %}bg-danger{% elif allergy.severity == 'moderate' %}bg-warning{% else %}bg-success{% endif %}">
+                        {{ allergy.severity.capitalize() }}
+                      </span>
+                    </p>
+                    {% if allergy.notes %}
+                      <small class="text-muted">{{ allergy.notes }}</small>
+                    {% endif %}
+                  </div>
+                  <form method="POST" action="{{ url_for('delete_allergy', id=allergy.id) }}" onsubmit="return confirmDelete(event, 'allergy')">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </form>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle me-2"></i>
+              No allergies added yet. Adding food allergies helps us provide safer nutrition recommendations.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function confirmDelete(event, itemType) {
+    if (!confirm(`Are you sure you want to delete this ${itemType}? This action cannot be undone.`)) {
+      event.preventDefault();
+      return false;
+    }
+    return true;
+  }
+</script>
+{% endblock %}
