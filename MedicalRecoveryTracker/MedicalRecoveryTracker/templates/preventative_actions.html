@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}Preventative Actions - MediTrack{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row">
+    <div class="col-md-12">
+      <h1 class="mb-4">
+        <i class="fas fa-shield-alt me-2"></i>Preventative Actions
+      </h1>
+      <p class="lead">
+        Generate personalized preventative health recommendations based on your symptoms. 
+        These evidence-based approaches can help minimize recurring issues and improve your recovery.
+      </p>
+    </div>
+  </div>
+  
+  <div class="row">
+    <!-- Generate Recovery Plan -->
+    <div class="col-lg-4 mb-4">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-magic me-2"></i>Generate Recovery Plan
+          </h3>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('create_recovery_plan') }}" class="needs-validation" novalidate>
+            <div class="mb-4">
+              <label class="form-label fw-bold">Select Symptoms to Address</label>
+              
+              {% if entries %}
+                <div class="list-group">
+                  {% for entry in entries %}
+                    <label class="list-group-item d-flex">
+                      <div class="form-check">
+                        <input class="form-check-input plan-checkbox me-2" type="checkbox" name="symptom_ids" value="{{ entry.id }}" id="symptom-{{ entry.id }}">
+                      </div>
+                      <div>
+                        <strong>{{ entry.symptom }}</strong>
+                        <div class="d-flex align-items-center">
+                          <span class="symptom-severity me-2" data-severity="{{ entry.severity }}">
+                            {{ entry.severity }}
+                          </span>
+                          <small class="text-muted">{{ entry.date_experienced.strftime('%b %d, %Y') }}</small>
+                        </div>
+                      </div>
+                    </label>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="alert alert-info">
+                  <i class="fas fa-info-circle me-2"></i>
+                  No symptoms recorded yet. Please add symptoms in your <a href="{{ url_for('journal') }}">Medical Journal</a> first.
+                </div>
+              {% endif %}
+            </div>
+            
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-primary" id="generatePlanBtn" {% if not entries %}disabled{% endif %}>
+                <i class="fas fa-brain me-2"></i>Generate Recovery Plan
+              </button>
+              {% if not entries %}
+                <a href="{{ url_for('journal') }}" class="btn btn-outline-primary">
+                  <i class="fas fa-plus me-2"></i>Add Symptoms First
+                </a>
+              {% endif %}
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Recovery Plans List -->
+    <div class="col-lg-8 mb-4">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-clipboard-list me-2"></i>Your Recovery Plans
+          </h3>
+        </div>
+        <div class="card-body">
+          {% if recovery_plans %}
+            <div class="row">
+              {% for plan in recovery_plans %}
+                <div class="col-md-6 mb-4">
+                  <div class="card h-100 plan-card">
+                    <div class="card-body">
+                      <h4 class="card-title">{{ plan.title }}</h4>
+                      <p class="card-text text-muted small">
+                        <i class="fas fa-calendar-alt me-1"></i>{{ plan.created_at.strftime('%b %d, %Y') }}
+                      </p>
+                      <p class="card-text">{{ plan.description|truncate(150) }}</p>
+                    </div>
+                    <div class="card-footer bg-transparent border-top-0">
+                      <a href="{{ url_for('view_plan', id=plan.id) }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-eye me-1"></i>View Details
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center py-5">
+              <i class="fas fa-clipboard-list fa-4x text-muted mb-3"></i>
+              <h4>No recovery plans yet</h4>
+              <p class="text-muted">Generate personalized recovery plans based on your symptoms.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Health Tips Section -->
+  <div class="row">
+    <div class="col-md-12">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-heartbeat me-2"></i>General Health Tips
+          </h3>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4 mb-4 mb-md-0">
+              <div class="recommendation-item">
+                <h4><i class="fas fa-bed me-2"></i>Sleep Quality</h4>
+                <p>Prioritize sleep by maintaining a consistent schedule and creating a restful environment. Aim for 7-9 hours of quality sleep each night to support recovery and immune function.</p>
+              </div>
+            </div>
+            
+            <div class="col-md-4 mb-4 mb-md-0">
+              <div class="recommendation-item">
+                <h4><i class="fas fa-tint me-2"></i>Hydration</h4>
+                <p>Stay properly hydrated by drinking water throughout the day. Proper hydration supports all bodily functions including circulation, digestion, and temperature regulation.</p>
+              </div>
+            </div>
+            
+            <div class="col-md-4">
+              <div class="recommendation-item">
+                <h4><i class="fas fa-walking me-2"></i>Regular Movement</h4>
+                <p>Incorporate regular physical activity into your routine. Even gentle movement like walking can improve circulation, reduce inflammation, and support mental wellbeing.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Handle checkbox selection for plan generation
+    const checkboxes = document.querySelectorAll('.plan-checkbox');
+    const generateBtn = document.getElementById('generatePlanBtn');
+    
+    if (checkboxes.length > 0 && generateBtn) {
+      checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateButtonState);
+      });
+      
+      // Initial check
+      updateButtonState();
+    }
+    
+    function updateButtonState() {
+      const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+      generateBtn.disabled = !anyChecked;
+    }
+  });
+</script>
+{% endblock %}

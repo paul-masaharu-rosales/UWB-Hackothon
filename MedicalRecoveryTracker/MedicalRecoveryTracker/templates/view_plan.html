@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}{{ plan.title }} - MediTrack{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row">
+    <div class="col-md-12">
+      <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item">
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+          </li>
+          <li class="breadcrumb-item">
+            {% if plan.plan_type == 'general' %}
+              <a href="{{ url_for('preventative_actions') }}">Preventative Actions</a>
+            {% elif plan.plan_type == 'nutrition' %}
+              <a href="{{ url_for('nutrition') }}">Nutrition</a>
+            {% elif plan.plan_type == 'sports' %}
+              <a href="{{ url_for('sports_recovery') }}">Sports Recovery</a>
+            {% endif %}
+          </li>
+          <li class="breadcrumb-item active" aria-current="page">{{ plan.title }}</li>
+        </ol>
+      </nav>
+      
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+          {% if plan.plan_type == 'general' %}
+            <i class="fas fa-clipboard-list me-2"></i>
+          {% elif plan.plan_type == 'nutrition' %}
+            <i class="fas fa-apple-alt me-2"></i>
+          {% elif plan.plan_type == 'sports' %}
+            <i class="fas fa-running me-2"></i>
+          {% endif %}
+          {{ plan.title }}
+        </h1>
+        
+        <div>
+          <span class="badge {% if plan.plan_type == 'general' %}bg-primary{% elif plan.plan_type == 'nutrition' %}bg-success{% else %}bg-info{% endif %} me-2">
+            {{ plan.plan_type.capitalize() }}
+          </span>
+          <small class="text-muted">Generated on {{ plan.created_at.strftime('%b %d, %Y') }}</small>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="row">
+    <div class="col-lg-8 mb-4">
+      <!-- Plan Description -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-info-circle me-2"></i>Overview
+          </h3>
+        </div>
+        <div class="card-body">
+          <p class="lead">{{ plan.description }}</p>
+        </div>
+      </div>
+      
+      <!-- Recommendations -->
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-list-ul me-2"></i>Recommendations
+          </h3>
+        </div>
+        <div class="card-body">
+          {% if recommendations %}
+            <div class="accordion" id="recommendationsAccordion">
+              {% for rec in recommendations %}
+                <div class="accordion-item mb-3 border recommendation-priority-{{ rec.priority }}">
+                  <h2 class="accordion-header" id="heading{{ rec.id }}">
+                    <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ rec.id }}" aria-expanded="{{ 'true' if loop.first else 'false' }}" aria-controls="collapse{{ rec.id }}">
+                      <div class="d-flex align-items-center w-100">
+                        <span class="badge {% if rec.priority == 1 %}bg-danger{% elif rec.priority == 2 %}bg-warning{% else %}bg-success{% endif %} me-3">
+                          {{ 'High' if rec.priority == 1 else 'Medium' if rec.priority == 2 else 'Low' }} Priority
+                        </span>
+                        <strong>{{ rec.title }}</strong>
+                      </div>
+                    </button>
+                  </h2>
+                  <div id="collapse{{ rec.id }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}" aria-labelledby="heading{{ rec.id }}" data-bs-parent="#recommendationsAccordion">
+                    <div class="accordion-body">
+                      <p>{{ rec.description|safe }}</p>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle me-2"></i>
+              No specific recommendations available for this plan.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+      <!-- Print Report Card -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-print me-2"></i>Print This Plan
+          </h3>
+        </div>
+        <div class="card-body">
+          <p>Include this recovery plan in a comprehensive medical report for your healthcare provider.</p>
+          <a href="{{ url_for('reports') }}" class="btn btn-primary d-block">
+            <i class="fas fa-file-medical-alt me-2"></i>Create Report
+          </a>
+        </div>
+      </div>
+      
+      <!-- Additional Resources Card -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-external-link-alt me-2"></i>Related Resources
+          </h3>
+        </div>
+        <div class="card-body">
+          <div class="list-group">
+            {% if plan.plan_type == 'general' %}
+              <a href="{{ url_for('journal') }}" class="list-group-item list-group-item-action d-flex align-items-center">
+                <i class="fas fa-book-medical me-3 text-primary"></i>
+                <div>
+                  <strong>Medical Journal</strong>
+                  <p class="mb-0 small text-muted">Continue tracking your symptoms</p>
+                </div>
+              </a>
+              <a href="{{ url_for('nutrition') }}" class="list-group-item list-group-item-action d-flex align-items-center">
+                <i class="fas fa-apple-alt me-3 text-success"></i>
+                <div>
+                  <strong>Nutrition Advice</strong>
+                  <p class="mb-0 small text-muted">Get dietary recommendations</p>
+                </div>
+              </a>
+            {% elif plan.plan_type == 'nutrition' %}
+              <a href="{{ url_for('preventative_actions') }}" class="list-group-item list-group-item-action d-flex align-items-center">
+                <i class="fas fa-shield-alt me-3 text-primary"></i>
+                <div>
+                  <strong>Preventative Actions</strong>
+                  <p class="mb-0 small text-muted">Discover general recovery options</p>
+                </div>
+              </a>
+              <a href="{{ url_for('profile') }}#allergies" class="list-group-item list-group-item-action d-flex align-items-center">
+                <i class="fas fa-allergies me-3 text-danger"></i>
+                <div>
+                  <strong>Manage Allergies</strong>
+                  <p class="mb-0 small text-muted">Update your food allergies</p>
+                </div>
+              </a>
+            {% elif plan.plan_type == 'sports' %}
+              <a href="{{ url_for('profile') }}#activities" class="list-group-item list-group-item-action d-flex align-items-center">
+                <i class="fas fa-dumbbell me-3 text-primary"></i>
+                <div>
+                  <strong>Manage Activities</strong>
+                  <p class="mb-0 small text-muted">Update your athletic activities</p>
+                </div>
+              </a>
+              <a href="{{ url_for('nutrition') }}" class="list-group-item list-group-item-action d-flex align-items-center">
+                <i class="fas fa-apple-alt me-3 text-success"></i>
+                <div>
+                  <strong>Nutrition Advice</strong>
+                  <p class="mb-0 small text-muted">Get sports nutrition recommendations</p>
+                </div>
+              </a>
+            {% endif %}
+            <a href="{{ url_for('reports') }}" class="list-group-item list-group-item-action d-flex align-items-center">
+              <i class="fas fa-file-medical-alt me-3 text-danger"></i>
+              <div>
+                <strong>Medical Reports</strong>
+                <p class="mb-0 small text-muted">Generate printable reports</p>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Plan Information Card -->
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-tag me-2"></i>Plan Information
+          </h3>
+        </div>
+        <div class="card-body">
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span><i class="fas fa-calendar-alt me-2"></i>Created</span>
+              <span>{{ plan.created_at.strftime('%b %d, %Y') }}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span><i class="fas fa-tag me-2"></i>Type</span>
+              <span>{{ plan.plan_type.capitalize() }}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span><i class="fas fa-list-ol me-2"></i>Recommendations</span>
+              <span>{{ recommendations|length }}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span><i class="fas fa-robot me-2"></i>Source</span>
+              <span>{{ 'AI Generated' if plan.ai_generated else 'Manual' }}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

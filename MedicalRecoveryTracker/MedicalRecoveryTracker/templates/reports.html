@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}Medical Reports - MediTrack{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row">
+    <div class="col-md-12">
+      <h1 class="mb-4">
+        <i class="fas fa-file-medical-alt me-2"></i>Medical Reports
+      </h1>
+      <p class="lead">
+        Generate comprehensive medical reports to share with your healthcare provider.
+        Select the symptoms and recovery plans you want to include in your report.
+      </p>
+    </div>
+  </div>
+  
+  <div class="card shadow-sm mb-4">
+    <div class="card-header">
+      <h3 class="mb-0">
+        <i class="fas fa-file-pdf me-2"></i>Create New Report
+      </h3>
+    </div>
+    <div class="card-body">
+      <form id="reportForm" method="POST" action="{{ url_for('generate_report') }}">
+        <!-- Report Title -->
+        <div class="mb-4">
+          <label for="report_title" class="form-label fw-bold">Report Title</label>
+          <input type="text" class="form-control" id="report_title" name="report_title" value="Medical Report - {{ current_user.first_name or 'Patient' }} {{ current_user.last_name or '' }}" required>
+        </div>
+        
+        <!-- Select Journal Entries -->
+        <div class="mb-4">
+          <label class="form-label fw-bold">Select Symptoms to Include</label>
+          
+          {% if entries %}
+            <div class="mb-2">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="selectAllJournals">
+                <label class="form-check-label" for="selectAllJournals">
+                  <strong>Select All Symptoms</strong>
+                </label>
+              </div>
+            </div>
+            
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th style="width: 50px;"></th>
+                    <th>Date</th>
+                    <th>Symptom</th>
+                    <th>Severity</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for entry in entries %}
+                    <tr>
+                      <td>
+                        <div class="form-check">
+                          <input class="form-check-input journal-checkbox" type="checkbox" name="journal_ids" value="{{ entry.id }}" id="journal-{{ entry.id }}">
+                        </div>
+                      </td>
+                      <td>{{ entry.date_experienced.strftime('%b %d, %Y') }}</td>
+                      <td>{{ entry.symptom }}</td>
+                      <td>
+                        <span class="symptom-severity" data-severity="{{ entry.severity }}">
+                          {{ entry.severity }}
+                        </span>
+                      </td>
+                      <td>
+                        {% if entry.description %}
+                          {{ entry.description|truncate(50) }}
+                        {% else %}
+                          <span class="text-muted">No description</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle me-2"></i>
+              No symptoms recorded yet. Please add symptoms in your <a href="{{ url_for('journal') }}">Medical Journal</a> first.
+            </div>
+          {% endif %}
+        </div>
+        
+        <!-- Select Recovery Plans -->
+        <div class="mb-4">
+          <label class="form-label fw-bold">Select Recovery Plans to Include</label>
+          
+          {% if plans %}
+            <div class="mb-2">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="selectAllPlans">
+                <label class="form-check-label" for="selectAllPlans">
+                  <strong>Select All Plans</strong>
+                </label>
+              </div>
+            </div>
+            
+            <div class="row">
+              {% for plan in plans %}
+                <div class="col-md-6 mb-3">
+                  <div class="card h-100">
+                    <div class="card-body">
+                      <div class="form-check mb-2">
+                        <input class="form-check-input plan-report-checkbox" type="checkbox" name="plan_ids" value="{{ plan.id }}" id="plan-{{ plan.id }}">
+                        <label class="form-check-label fw-bold" for="plan-{{ plan.id }}">
+                          {{ plan.title }}
+                        </label>
+                      </div>
+                      <p class="card-text small mb-1">
+                        <span class="badge {% if plan.plan_type == 'general' %}bg-primary{% elif plan.plan_type == 'nutrition' %}bg-success{% else %}bg-info{% endif %} me-2">
+                          {{ plan.plan_type.capitalize() }}
+                        </span>
+                        <small class="text-muted">{{ plan.created_at.strftime('%b %d, %Y') }}</small>
+                      </p>
+                      <p class="card-text small">{{ plan.description|truncate(100) }}</p>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle me-2"></i>
+              No recovery plans generated yet. Visit the <a href="{{ url_for('preventative_actions') }}">Preventative Actions</a> section to generate plans.
+            </div>
+          {% endif %}
+        </div>
+        
+        <!-- Report Generation Controls -->
+        <div class="d-grid gap-2">
+          <button type="button" id="generateReportBtn" class="btn btn-primary" {% if not entries and not plans %}disabled{% endif %}>
+            <i class="fas fa-file-pdf me-2"></i>Generate PDF Report
+          </button>
+          
+          {% if not entries and not plans %}
+            <div class="alert alert-warning mt-3">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              You need to have at least some symptoms or recovery plans recorded before generating a report.
+            </div>
+          {% endif %}
+        </div>
+      </form>
+      
+      <!-- Report Generation Status -->
+      <div id="reportGenerationStatus" class="mt-3" style="display: none;"></div>
+    </div>
+  </div>
+  
+  <!-- Instruction Section -->
+  <div class="card shadow-sm">
+    <div class="card-header">
+      <h3 class="mb-0">
+        <i class="fas fa-info-circle me-2"></i>Report Information
+      </h3>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6 mb-4 mb-md-0">
+          <h4>What's Included in Your Report</h4>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item">
+              <i class="fas fa-user-circle me-2 text-primary"></i>
+              <strong>Patient Information:</strong> Your basic information including name, age, gender, weight, height, and BMI.
+            </li>
+            <li class="list-group-item">
+              <i class="fas fa-thermometer-half me-2 text-primary"></i>
+              <strong>Symptom History:</strong> Details of your selected symptoms, including severity and dates experienced.
+            </li>
+            <li class="list-group-item">
+              <i class="fas fa-clipboard-list me-2 text-primary"></i>
+              <strong>Recovery Plans:</strong> AI-generated recommendations for symptom management and recovery.
+            </li>
+            <li class="list-group-item">
+              <i class="fas fa-chart-line me-2 text-primary"></i>
+              <strong>Health Trends:</strong> Information about your symptom patterns and progress.
+            </li>
+          </ul>
+        </div>
+        
+        <div class="col-md-6">
+          <h4>Using Your Report</h4>
+          <p>Your medical report is designed to help facilitate communication with healthcare providers. Here's how to use it effectively:</p>
+          <ul>
+            <li>Bring a printed copy to your next doctor's appointment</li>
+            <li>Use it to provide an accurate history of your symptoms</li>
+            <li>Discuss the AI-suggested recovery plans with your healthcare provider</li>
+            <li>Track your progress over time by generating regular reports</li>
+          </ul>
+          <div class="alert alert-info">
+            <i class="fas fa-stethoscope me-2"></i>
+            <strong>Medical Disclaimer:</strong> The information in this report is not intended to replace professional medical advice. Always consult with qualified healthcare providers regarding your health.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pdf_generator.js') }}"></script>
+{% endblock %}
